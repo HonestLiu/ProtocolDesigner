@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useProtocolStore } from '@/store/protocol-store';
 import {
   Dialog,
@@ -49,13 +48,6 @@ const MODULE_GROUPS: { title: string; key: keyof ProtocolModules; level: Protoco
   { title: 'Endian Control', key: 'endianControl', level: 4 },
 ];
 
-function getMinLevel(key: keyof ProtocolModules): number {
-  for (const mg of MODULE_GROUPS) {
-    if (mg.key === key) return mg.level;
-  }
-  return 1;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -98,7 +90,7 @@ export function ProtocolSettingsDialog({ open, onClose }: Props) {
           {/* Level Selector */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Protocol Level</Label>
-            <Select value={String(ir.level)} onValueChange={handleLevelChange}>
+            <Select value={String(ir.level)} onValueChange={(v) => handleLevelChange(v!)}>
               <SelectTrigger className="w-full h-9">
                 <SelectValue />
               </SelectTrigger>
@@ -163,7 +155,7 @@ export function ProtocolSettingsDialog({ open, onClose }: Props) {
               <Separator />
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Byte Order</Label>
-                <Select value={ir.endian} onValueChange={handleEndianChange}>
+                <Select value={ir.endian} onValueChange={(v) => handleEndianChange(v!)}>
                   <SelectTrigger className="w-full h-9">
                     <SelectValue />
                   </SelectTrigger>

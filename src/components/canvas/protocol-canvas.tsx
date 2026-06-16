@@ -125,7 +125,7 @@ export function ProtocolCanvas() {
       }
 
       // Only create connection if one end is a container and the other is a field
-      if (!containerType || !fieldId) return;
+      if (!containerType || !containerId || !fieldId) return;
       const field = store.ir.fields.find((f) => f.id === fieldId);
       if (!field) return;
 

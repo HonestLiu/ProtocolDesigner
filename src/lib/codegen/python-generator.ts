@@ -585,7 +585,7 @@ function genPyOptionalInit(fields: ProtocolField[], ir: ProtocolIR): string {
 
 // ── 15. genPyEncode — full packet encode (header + payload + CRC) ─────────
 
-function genPyEncode(name: string, msgIndex: number, _modules: ProtocolModules): string {
+function genPyEncode(name: string, _msgIndex: number, modules: ProtocolModules): string {
   let out = '    def encode(self) -> bytes:\n';
   out += '        """Encode complete packet with header."""\n';
   out += '        payload = self.encode_payload()\n';

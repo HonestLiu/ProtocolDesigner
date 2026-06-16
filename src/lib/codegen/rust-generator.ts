@@ -2,7 +2,6 @@ import type { ProtocolIR, ProtocolField, ProtocolModules, Endianness } from '@/t
 import {
   getFieldWireSize, totalSize, findEnumForField,
   resolveModules, getEndianFnSuffix, getEndianFromFnSuffix,
-  isVarField, isFixedField, computeOptionalBitmaskSize,
   getHeaderSize, getHeaderLayout,
 } from './shared';
 
@@ -250,7 +249,7 @@ function genRsStructDef(name: string, fields: ProtocolField[], ir: ProtocolIR): 
 
 // ── 12. TLV Encode Body ───────────────────────────────────────────────────
 
-function genRsTlvEncode(name: string, fields: ProtocolField[], ir: ProtocolIR): string {
+function genRsTlvEncode(_name: string, fields: ProtocolField[], ir: ProtocolIR): string {
   const lines: string[] = [
     '    pub fn encode_payload(&self, buf: &mut Vec<u8>) {',
   ];
@@ -308,7 +307,7 @@ function genRsTlvEncode(name: string, fields: ProtocolField[], ir: ProtocolIR): 
 
 // ── 13. TLV Decode Body ───────────────────────────────────────────────────
 
-function genRsTlvDecode(name: string, fields: ProtocolField[], ir: ProtocolIR): string {
+function genRsTlvDecode(_name: string, fields: ProtocolField[], ir: ProtocolIR): string {
   const lines: string[] = [
     '    pub fn decode_payload(buf: &[u8]) -> io::Result<Self> {',
     '        let mut pos = 0;',
@@ -461,7 +460,7 @@ function genRsFlatEncode(fields: ProtocolField[], ir: ProtocolIR): string {
 
 // ── 15. Flat Decode Body ──────────────────────────────────────────────────
 
-function genRsFlatDecode(name: string, fields: ProtocolField[], ir: ProtocolIR): string {
+function genRsFlatDecode(_name: string, fields: ProtocolField[], ir: ProtocolIR): string {
   const hasVarField = fields.some((f) => f.type === 'vstring' || f.type === 'vbytes');
   const lines: string[] = [
     '    pub fn decode_payload(buf: &[u8]) -> io::Result<Self> {',
@@ -557,10 +556,8 @@ function genRsValidation(name: string, fields: ProtocolField[]): string {
   const lines: string[] = [
     '    pub fn validate(&self) -> io::Result<()> {',
   ];
-  let hasRangeChecks = false;
   for (const f of fields) {
     if (f.minValue !== undefined || f.maxValue !== undefined) {
-      hasRangeChecks = true;
       const nm = f.name;
       const checks: string[] = [];
       if (f.minValue !== undefined) {
@@ -581,7 +578,7 @@ function genRsValidation(name: string, fields: ProtocolField[]): string {
 
 // ── 17. Full Encode (header + payload + CRC) ──────────────────────────────
 
-function genRsEncode(name: string, idx: number, modules: ProtocolModules): string {
+function genRsEncode(_name: string, idx: number, modules: ProtocolModules): string {
   const lines: string[] = [
     '    pub fn encode(&self) -> Vec<u8> {',
   ];
@@ -604,7 +601,7 @@ function genRsEncode(name: string, idx: number, modules: ProtocolModules): strin
 
 // ── 18. Full Decode (header + payload) ────────────────────────────────────
 
-function genRsDecode(name: string, modules: ProtocolModules): string {
+function genRsDecode(_name: string, modules: ProtocolModules): string {
   const lines: string[] = [
     '    pub fn decode(buf: &[u8]) -> io::Result<(ProtocolHeader, Self)> {',
   ];

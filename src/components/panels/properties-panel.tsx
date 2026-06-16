@@ -239,8 +239,8 @@ export function PropertiesPanel() {
                   <Label className="text-xs">Endian Override</Label>
                   <Select
                     value={selectedField.endian || 'none'}
-                    onValueChange={(v: string) => {
-                      if (v === 'none') updateField(selectedNodeId!, { endian: undefined });
+                    onValueChange={(v) => {
+                      if (v === 'none' || v === null) updateField(selectedNodeId!, { endian: undefined });
                       else updateField(selectedNodeId!, { endian: v as Endianness });
                     }}
                   >
