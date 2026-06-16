@@ -109,32 +109,40 @@ export function ProtocolCanvas() {
       const targetNode = store.nodes.find((n) => n.id === connection.target);
       if (!sourceNode || !targetNode) return;
 
-      const containerType = sourceNode.type === 'message' || sourceNode.type === 'struct'
-        ? sourceNode.type : targetNode.type === 'message' || targetNode.type === 'struct'
-        ? targetNode.type : null;
-      const fieldType = sourceNode.type === 'field' ? sourceNode.id
-        : targetNode.type === 'field' ? targetNode.id : null;
+      // Determine container (message/struct) and which endpoint is the field
+      let containerId: string | null = null;
+      let fieldId: string | null = null;
+      let containerType: 'message' | 'struct' | null = null;
 
-      if (containerType && fieldType) {
-        const containerId = containerType === 'message' ? connection.source : connection.target;
-        const fieldId = containerType === 'message' ? connection.target : connection.source;
-        const field = store.ir.fields.find((f) => f.id === fieldId);
-        if (!field) return;
+      if (sourceNode.type === 'message' || sourceNode.type === 'struct') {
+        containerType = sourceNode.type;
+        containerId = connection.source;
+        fieldId = connection.target;
+      } else if (targetNode.type === 'message' || targetNode.type === 'struct') {
+        containerType = targetNode.type;
+        containerId = connection.target;
+        fieldId = connection.source;
+      }
 
-        if (containerType === 'message') {
-          const msg = store.ir.messages.find((m) => m.id === containerId);
-          if (msg && !msg.fields.includes(fieldId)) {
-            useProtocolStore.getState().updateMessage(containerId, {
-              fields: [...msg.fields, fieldId],
-            });
-          }
-        } else {
-          const st = store.ir.structs.find((s) => s.id === containerId);
-          if (st && !st.fields.includes(fieldId)) {
-            useProtocolStore.getState().updateStruct(containerId, {
-              fields: [...st.fields, fieldId],
-            });
-          }
+      // Only create connection if one end is a container and the other is a field
+      if (!containerType || !fieldId) return;
+      const field = store.ir.fields.find((f) => f.id === fieldId);
+      if (!field) return;
+
+      // Add field to container's field list
+      if (containerType === 'message') {
+        const msg = store.ir.messages.find((m) => m.id === containerId);
+        if (msg && !msg.fields.includes(fieldId)) {
+          useProtocolStore.getState().updateMessage(containerId, {
+            fields: [...msg.fields, fieldId],
+          });
+        }
+      } else {
+        const st = store.ir.structs.find((s) => s.id === containerId);
+        if (st && !st.fields.includes(fieldId)) {
+          useProtocolStore.getState().updateStruct(containerId, {
+            fields: [...st.fields, fieldId],
+          });
         }
       }
 
