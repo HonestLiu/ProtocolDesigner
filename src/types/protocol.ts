@@ -104,6 +104,8 @@ export interface ProtocolProject {
   ir: ProtocolIR;
   createdAt: string;
   updatedAt: string;
+  nodes?: CanvasNode[];
+  edges?: CanvasEdge[];
 }
 
 export interface CanvasNode {

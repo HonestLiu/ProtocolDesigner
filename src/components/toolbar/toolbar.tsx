@@ -4,6 +4,7 @@ import { generateC, generatePython, generateRust } from '@/lib/code-generator';
 import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X, Copy, Check, Settings2, ShieldCheck, Tag } from 'lucide-react';
 import { ProtocolSettingsDialog, getLevelShortLabel, getLevelColor } from './protocol-settings';
 import { resolveModules } from '@/lib/codegen/shared';
+import { downloadText, normalizeProjectFile, projectDownloadName } from '@/lib/project-file';
 
 export function Toolbar() {
   const addMessage = useProtocolStore((s) => s.addMessage);
@@ -13,6 +14,7 @@ export function Toolbar() {
   const ir = useProtocolStore((s) => s.ir);
   const projectName = useProtocolStore((s) => s.projectName);
   const loadProject = useProtocolStore((s) => s.loadProject);
+  const exportProject = useProtocolStore((s) => s.exportProject);
   const resetProject = useProtocolStore((s) => s.resetProject);
 
   const [showCode, setShowCode] = useState(false);
@@ -20,6 +22,7 @@ export function Toolbar() {
   const [generatedCode, setGeneratedCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
 
   const modules = resolveModules(ir);
 
@@ -71,27 +74,76 @@ export function Toolbar() {
     setGeneratedCode(code);
   };
 
-  const handleSave = () => {
-    const data = { name: projectName, ir };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${projectName.replace(/\s+/g, '_')}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const saveProjectToFile = async (project: ReturnType<typeof exportProject>, json: string, suggestedName: string) => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      let filePath = currentFilePath;
+
+      if (!filePath) {
+        const { save } = await import('@tauri-apps/plugin-dialog');
+        filePath = await save({
+          filters: [{ name: 'Protocol Designer File', extensions: ['pdc'] }],
+          defaultPath: projectDownloadName(suggestedName),
+        });
+        if (!filePath) return;
+        setCurrentFilePath(filePath);
+      }
+
+      await invoke('save_protocol', { project, path: filePath });
+    } catch {
+      downloadText(projectDownloadName(suggestedName), json);
+    }
   };
 
-  const handleLoad = () => {
+  const loadProjectFromData = (value: unknown, fallbackName = projectName) => {
+    const project = normalizeProjectFile(value, fallbackName);
+    if (!project) {
+      throw new Error('Invalid protocol file format.');
+    }
+
+    loadProject(project);
+    setCurrentFilePath(null);
+  };
+
+  const handleSave = async () => {
+    const data = exportProject();
+    const json = JSON.stringify(data, null, 2);
+    await saveProjectToFile(data, json, data.name);
+  };
+
+  const handleLoad = async () => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const filePath = await open({
+        filters: [{ name: 'Protocol Designer File', extensions: ['pdc', 'json'] }],
+        multiple: false,
+      });
+
+      if (typeof filePath !== 'string' || !filePath) return;
+
+      const project = await invoke('load_protocol', { path: filePath });
+      loadProject(project);
+      setCurrentFilePath(filePath);
+      return;
+    } catch {
+      // fall through to browser-style file picker below
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+    input.accept = '.pdc,.json';
+    input.onchange = async (e: Event) => {
+      const files = (e.target as HTMLInputElement).files;
+      const file = files?.[0];
       if (!file) return;
-      const text = await file.text();
-      const data = JSON.parse(text);
-      loadProject(data);
+      try {
+        const text = await file.text();
+        loadProjectFromData(JSON.parse(text), file.name.replace(/\.[^.]+$/, ''));
+      } catch (err) {
+        console.error('Failed to load protocol file:', err);
+        alert('Failed to load file: ' + (err instanceof Error ? err.message : String(err)));
+      }
     };
     input.click();
   };
@@ -176,7 +228,7 @@ export function Toolbar() {
         <div className="flex items-center gap-1">
           <IconButton onClick={handleSave} icon={Download} title="Save" />
           <IconButton onClick={handleLoad} icon={Upload} title="Load" />
-          <IconButton onClick={resetProject} icon={RotateCcw} title="Reset" />
+          <IconButton onClick={() => { resetProject(); setCurrentFilePath(null); }} icon={RotateCcw} title="New" />
         </div>
       </div>
 

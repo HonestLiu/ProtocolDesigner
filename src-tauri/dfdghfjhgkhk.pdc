@@ -1,0 +1,680 @@
+{
+  "name": "Demo Protocol",
+  "ir": {
+    "version": "1.0.0",
+    "level": 1,
+    "modules": {
+      "header": true,
+      "structTypes": true,
+      "enumTypes": true,
+      "crc": false,
+      "optionalFields": false,
+      "rangeChecks": false,
+      "validation": false,
+      "tlv": false,
+      "versionField": false,
+      "forwardCompat": false,
+      "bitfields": false,
+      "unions": false,
+      "endianControl": false
+    },
+    "endian": "little",
+    "messages": [
+      {
+        "id": "msg-sensor",
+        "name": "SensorData",
+        "fields": [
+          "f-sensor-id",
+          "f-sensor-temp",
+          "f-sensor-humid",
+          "f-sensor-status"
+        ]
+      },
+      {
+        "id": "msg-motor",
+        "name": "MotorCommand",
+        "fields": [
+          "f-motor-rpm",
+          "f-motor-dir",
+          "f-motor-err"
+        ]
+      }
+    ],
+    "structs": [
+      {
+        "id": "st-config",
+        "name": "SensorConfig",
+        "fields": [
+          "f-config-interval",
+          "f-config-mode",
+          "f-config-buffer"
+        ]
+      },
+      {
+        "id": "1781604246752-5e7di49",
+        "name": "Struct62U8",
+        "fields": []
+      },
+      {
+        "id": "1781604247024-oagq73m",
+        "name": "Struct631S",
+        "fields": []
+      },
+      {
+        "id": "1781604247197-nnzgpq7",
+        "name": "Struct636L",
+        "fields": []
+      },
+      {
+        "id": "1781604247392-9spdgmy",
+        "name": "Struct63C0",
+        "fields": []
+      },
+      {
+        "id": "1781604247585-cegeju6",
+        "name": "Struct63HD",
+        "fields": []
+      },
+      {
+        "id": "1781604247777-qis1qia",
+        "name": "Struct63MP",
+        "fields": []
+      },
+      {
+        "id": "1781604247968-0wydged",
+        "name": "Struct63S0",
+        "fields": []
+      },
+      {
+        "id": "1781604248162-mcg1nsu",
+        "name": "Struct63XE",
+        "fields": []
+      },
+      {
+        "id": "1781604248374-6ba970s",
+        "name": "Struct643A",
+        "fields": []
+      },
+      {
+        "id": "1781604248549-k8tutu0",
+        "name": "Struct6485",
+        "fields": []
+      },
+      {
+        "id": "1781604248724-kad0km4",
+        "name": "Struct64D0",
+        "fields": []
+      },
+      {
+        "id": "1781604248894-qkhyd47",
+        "name": "Struct64HQ",
+        "fields": []
+      }
+    ],
+    "enums": [
+      {
+        "id": "en-status",
+        "name": "SensorStatus",
+        "values": {
+          "OK": 0,
+          "OFFLINE": 3,
+          "WARNING": 1,
+          "ERROR": 2
+        }
+      },
+      {
+        "id": "en-error",
+        "name": "MotorError",
+        "values": {
+          "OVERHEAT": 1,
+          "OVERCURRENT": 3,
+          "STALL": 2,
+          "NONE": 0
+        }
+      }
+    ],
+    "fields": [
+      {
+        "id": "f-sensor-id",
+        "name": "sensor_id",
+        "type": "uint8",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Sensor identifier (0-255)",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-sensor-temp",
+        "name": "temperature",
+        "type": "float",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Temperature in Celsius",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-sensor-humid",
+        "name": "humidity",
+        "type": "uint16",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Relative humidity %",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-sensor-status",
+        "name": "status",
+        "type": "enum",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Sensor status code",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-motor-rpm",
+        "name": "rpm",
+        "type": "uint16",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Motor speed in RPM",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-motor-dir",
+        "name": "direction",
+        "type": "uint8",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "0=CW, 1=CCW",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-motor-err",
+        "name": "error_code",
+        "type": "enum",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Motor error code",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-config-interval",
+        "name": "interval_ms",
+        "type": "uint32",
+        "length": null,
+        "defaultValue": null,
+        "optional": true,
+        "comment": "Sample interval in ms",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-config-mode",
+        "name": "mode",
+        "type": "uint8",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Operating mode",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-config-buffer",
+        "name": "buffer",
+        "type": "bytes",
+        "length": 32,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Config buffer",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "data": {
+        "label": "SensorData"
+      },
+      "id": "msg-sensor",
+      "position": {
+        "x": 80,
+        "y": 60
+      },
+      "type": "message"
+    },
+    {
+      "data": {
+        "fieldType": "uint8",
+        "label": "sensor_id"
+      },
+      "id": "f-sensor-id",
+      "position": {
+        "x": 380,
+        "y": 20
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "fieldType": "float",
+        "label": "temperature"
+      },
+      "id": "f-sensor-temp",
+      "position": {
+        "x": 380,
+        "y": 100
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "fieldType": "uint16",
+        "label": "humidity"
+      },
+      "id": "f-sensor-humid",
+      "position": {
+        "x": 380,
+        "y": 180
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "fieldType": "enum",
+        "label": "status"
+      },
+      "id": "f-sensor-status",
+      "position": {
+        "x": 380,
+        "y": 260
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "label": "MotorCommand"
+      },
+      "id": "msg-motor",
+      "position": {
+        "x": 80,
+        "y": 380
+      },
+      "type": "message"
+    },
+    {
+      "data": {
+        "fieldType": "uint16",
+        "label": "rpm"
+      },
+      "id": "f-motor-rpm",
+      "position": {
+        "x": 380,
+        "y": 340
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "fieldType": "uint8",
+        "label": "direction"
+      },
+      "id": "f-motor-dir",
+      "position": {
+        "x": 380,
+        "y": 420
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "fieldType": "enum",
+        "label": "error_code"
+      },
+      "id": "f-motor-err",
+      "position": {
+        "x": 380,
+        "y": 500
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "label": "SensorConfig"
+      },
+      "id": "st-config",
+      "position": {
+        "x": 700,
+        "y": 60
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "fieldType": "uint32",
+        "label": "interval_ms"
+      },
+      "id": "f-config-interval",
+      "position": {
+        "x": 1000,
+        "y": 20
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "fieldType": "uint8",
+        "label": "mode"
+      },
+      "id": "f-config-mode",
+      "position": {
+        "x": 1000,
+        "y": 100
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "fieldType": "bytes",
+        "label": "buffer"
+      },
+      "id": "f-config-buffer",
+      "position": {
+        "x": 1000,
+        "y": 180
+      },
+      "type": "field"
+    },
+    {
+      "data": {
+        "label": "SensorStatus"
+      },
+      "id": "en-status",
+      "position": {
+        "x": 700,
+        "y": 340
+      },
+      "type": "enum"
+    },
+    {
+      "data": {
+        "label": "MotorError"
+      },
+      "id": "en-error",
+      "position": {
+        "x": 700,
+        "y": 500
+      },
+      "type": "enum"
+    },
+    {
+      "data": {
+        "label": "Struct62U8"
+      },
+      "id": "1781604246752-5e7di49",
+      "position": {
+        "x": 250,
+        "y": 250
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct631S"
+      },
+      "id": "1781604247024-oagq73m",
+      "position": {
+        "x": 250,
+        "y": 250
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct636L"
+      },
+      "id": "1781604247197-nnzgpq7",
+      "position": {
+        "x": 250,
+        "y": 250
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct63C0"
+      },
+      "id": "1781604247392-9spdgmy",
+      "position": {
+        "x": 250,
+        "y": 250
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct63HD"
+      },
+      "id": "1781604247585-cegeju6",
+      "position": {
+        "x": 250,
+        "y": 250
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct63MP"
+      },
+      "id": "1781604247777-qis1qia",
+      "position": {
+        "x": 250,
+        "y": 250
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct63S0"
+      },
+      "id": "1781604247968-0wydged",
+      "position": {
+        "x": 250,
+        "y": 250
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct63XE"
+      },
+      "id": "1781604248162-mcg1nsu",
+      "position": {
+        "x": 162.45877934558945,
+        "y": 753.3620187628605
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct643A"
+      },
+      "id": "1781604248374-6ba970s",
+      "position": {
+        "x": 689.1651236162929,
+        "y": 900.7230735311184
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct6485"
+      },
+      "id": "1781604248549-k8tutu0",
+      "position": {
+        "x": 220.81959311519648,
+        "y": 940.1166228256031
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct64D0"
+      },
+      "id": "1781604248724-kad0km4",
+      "position": {
+        "x": 627.8862691582056,
+        "y": 997.0184162509702
+      },
+      "type": "struct"
+    },
+    {
+      "data": {
+        "label": "Struct64HQ"
+      },
+      "id": "1781604248894-qkhyd47",
+      "position": {
+        "x": -195.00120499325365,
+        "y": 897.8050328426381
+      },
+      "type": "struct"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-sensor-id",
+      "source": "msg-sensor",
+      "target": "f-sensor-id"
+    },
+    {
+      "id": "e-sensor-temp",
+      "source": "msg-sensor",
+      "target": "f-sensor-temp"
+    },
+    {
+      "id": "e-sensor-humid",
+      "source": "msg-sensor",
+      "target": "f-sensor-humid"
+    },
+    {
+      "id": "e-sensor-status",
+      "source": "msg-sensor",
+      "target": "f-sensor-status"
+    },
+    {
+      "id": "e-motor-rpm",
+      "source": "msg-motor",
+      "target": "f-motor-rpm"
+    },
+    {
+      "id": "e-motor-dir",
+      "source": "msg-motor",
+      "target": "f-motor-dir"
+    },
+    {
+      "id": "e-motor-err",
+      "source": "msg-motor",
+      "target": "f-motor-err"
+    },
+    {
+      "id": "e-config-interval",
+      "source": "st-config",
+      "target": "f-config-interval"
+    },
+    {
+      "id": "e-config-mode",
+      "source": "st-config",
+      "target": "f-config-mode"
+    },
+    {
+      "id": "e-config-buffer",
+      "source": "st-config",
+      "target": "f-config-buffer"
+    }
+  ]
+}

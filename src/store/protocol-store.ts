@@ -49,8 +49,8 @@ interface ProtocolStore {
   setLevel: (level: ProtocolLevel) => void;
   setModules: (overrides: Partial<ProtocolModules>) => void;
   setEndian: (endian: Endianness) => void;
-  loadProject: (data: { name: string; ir: ProtocolIR }) => void;
-  exportProject: () => { name: string; ir: ProtocolIR };
+  loadProject: (data: { name: string; ir: ProtocolIR; nodes?: CanvasNode[]; edges?: CanvasEdge[] }) => void;
+  exportProject: () => { name: string; ir: ProtocolIR; nodes: CanvasNode[]; edges: CanvasEdge[] };
   resetProject: () => void;
 }
 
@@ -337,26 +337,133 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
   getEnumById: (id) => get().ir.enums.find((e) => e.id === id),
 
   loadProject: (data) => {
-    // Migrate old-format JSON (crcEnabled/tlvEnabled) to new level system
+    // Ensure required fields exist (migration from old format or truncated by Rust IPC)
     const ir = data.ir as ProtocolIR & { crcEnabled?: boolean; tlvEnabled?: boolean };
-    if (ir.level === undefined && (ir.crcEnabled !== undefined || ir.tlvEnabled !== undefined)) {
-      const oldCrc = ir.crcEnabled ?? false;
-      const oldTlv = ir.tlvEnabled ?? false;
-      let level: ProtocolLevel = 1;
-      if (oldCrc && oldTlv) level = 3;
-      else if (oldTlv) level = 3;
-      else if (oldCrc) level = 2;
-      ir.level = level;
-      ir.modules = { ...LEVEL_DEFAULTS[level] };
-      ir.endian = 'little';
-      delete ir.crcEnabled;
-      delete ir.tlvEnabled;
+    if (ir.level === undefined) {
+      if (ir.crcEnabled !== undefined || ir.tlvEnabled !== undefined) {
+        // Old format with crcEnabled/tlvEnabled
+        const oldCrc = ir.crcEnabled ?? false;
+        const oldTlv = ir.tlvEnabled ?? false;
+        let level: ProtocolLevel = 1;
+        if (oldCrc && oldTlv) level = 3;
+        else if (oldTlv) level = 3;
+        else if (oldCrc) level = 2;
+        ir.level = level;
+        ir.modules = { ...LEVEL_DEFAULTS[level] };
+        ir.endian = 'little';
+        delete ir.crcEnabled;
+        delete ir.tlvEnabled;
+      } else {
+        // Missing entirely (e.g., saved from older build) → default to Level 1
+        ir.level = 1;
+        ir.modules = { ...LEVEL_DEFAULTS[1] };
+        ir.endian = 'little';
+      }
     }
+
+    const savedNodes = data.nodes && data.nodes.length > 0 ? data.nodes : null;
+    const savedEdges = data.edges && data.edges.length > 0 ? data.edges : null;
+
+    if (savedNodes && savedEdges) {
+      return set({
+        projectName: data.name,
+        ir: ir as ProtocolIR,
+        nodes: savedNodes,
+        edges: savedEdges,
+        selectedNodeId: null,
+      });
+    }
+
+    // Recreate canvas nodes and edges from the loaded IR
+    const nodes: CanvasNode[] = [];
+    const edges: CanvasEdge[] = [];
+    const Y_STEP = 80;
+    const X_OFF = 300;
+
+    // Messages: each message + its fields in a row
+    let yPos = 60;
+    for (const msg of ir.messages) {
+      nodes.push({
+        id: msg.id,
+        type: 'message',
+        position: { x: 80, y: yPos },
+        data: { label: msg.name },
+      });
+      let fy = yPos;
+      for (const fid of msg.fields) {
+        const field = ir.fields.find((f) => f.id === fid);
+        if (field) {
+          if (!nodes.find((n) => n.id === field.id)) {
+            nodes.push({
+              id: field.id,
+              type: 'field',
+              position: { x: 80 + X_OFF, y: fy },
+              data: { label: field.name, fieldType: field.type },
+            });
+          }
+          edges.push({
+            id: `${msg.id}-${field.id}`,
+            source: msg.id,
+            target: field.id,
+          });
+        }
+        fy += Y_STEP;
+      }
+      yPos = fy + 40;
+    }
+
+    // Structs: each struct + its fields in a separate column
+    let syPos = 60;
+    const structX = Math.max(80 + X_OFF + X_OFF, 700);
+    for (const st of ir.structs) {
+      nodes.push({
+        id: st.id,
+        type: 'struct',
+        position: { x: structX, y: syPos },
+        data: { label: st.name },
+      });
+      let fy = syPos;
+      for (const fid of st.fields) {
+        const field = ir.fields.find((f) => f.id === fid);
+        if (field) {
+          if (!nodes.find((n) => n.id === field.id)) {
+            nodes.push({
+              id: field.id,
+              type: 'field',
+              position: { x: structX + X_OFF, y: fy },
+              data: { label: field.name, fieldType: field.type },
+            });
+          }
+          edges.push({
+            id: `${st.id}-${field.id}`,
+            source: st.id,
+            target: field.id,
+          });
+        }
+        fy += Y_STEP;
+      }
+      syPos = fy + 40;
+    }
+
+    // Enums: below structs
+    let eyPos = Math.max(yPos, syPos);
+    for (const en of ir.enums) {
+      if (!nodes.find((n) => n.id === en.id)) {
+        nodes.push({
+          id: en.id,
+          type: 'enum',
+          position: { x: structX, y: eyPos },
+          data: { label: en.name },
+        });
+        eyPos += Y_STEP;
+      }
+    }
+
     return set({
       projectName: data.name,
       ir: ir as ProtocolIR,
-      nodes: [],
-      edges: [],
+      nodes,
+      edges,
       selectedNodeId: null,
     });
   },
@@ -364,6 +471,8 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
   exportProject: () => ({
     name: get().projectName,
     ir: get().ir,
+    nodes: get().nodes,
+    edges: get().edges,
   }),
 
   resetProject: () =>

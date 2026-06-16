@@ -1,0 +1,254 @@
+{
+  "name": "Untitled Protocol",
+  "ir": {
+    "version": "1.0.0",
+    "level": 1,
+    "modules": {
+      "header": true,
+      "structTypes": true,
+      "enumTypes": true,
+      "crc": false,
+      "optionalFields": false,
+      "rangeChecks": false,
+      "validation": false,
+      "tlv": false,
+      "versionField": false,
+      "forwardCompat": false,
+      "bitfields": false,
+      "unions": false,
+      "endianControl": false
+    },
+    "endian": "little",
+    "messages": [
+      {
+        "id": "msg-motor",
+        "name": "MotorCommand",
+        "fields": [
+          "f-motor-rpm",
+          "f-motor-dir",
+          "f-motor-err"
+        ]
+      }
+    ],
+    "structs": [
+      {
+        "id": "st-config",
+        "name": "SensorConfig",
+        "fields": [
+          "f-config-interval",
+          "f-config-mode",
+          "f-config-buffer"
+        ]
+      },
+      {
+        "id": "1781602661529-j358x7e",
+        "name": "Struct83O9",
+        "fields": []
+      }
+    ],
+    "enums": [
+      {
+        "id": "en-status",
+        "name": "SensorStatus",
+        "values": {
+          "ERROR": 2,
+          "OFFLINE": 3,
+          "WARNING": 1,
+          "OK": 0
+        }
+      },
+      {
+        "id": "en-error",
+        "name": "MotorError",
+        "values": {
+          "STALL": 2,
+          "OVERCURRENT": 3,
+          "OVERHEAT": 1,
+          "NONE": 0
+        }
+      }
+    ],
+    "fields": [
+      {
+        "id": "f-sensor-id",
+        "name": "sensor_id",
+        "type": "uint8",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Sensor identifier (0-255)",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-sensor-temp",
+        "name": "temperature",
+        "type": "float",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Temperature in Celsius",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-sensor-humid",
+        "name": "humidity",
+        "type": "uint16",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Relative humidity %",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-sensor-status",
+        "name": "status",
+        "type": "enum",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Sensor status code",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-motor-rpm",
+        "name": "rpm",
+        "type": "uint16",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Motor speed in RPM",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-motor-dir",
+        "name": "direction",
+        "type": "uint8",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "0=CW, 1=CCW",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-motor-err",
+        "name": "error_code",
+        "type": "enum",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Motor error code",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-config-interval",
+        "name": "interval_ms",
+        "type": "uint32",
+        "length": null,
+        "defaultValue": null,
+        "optional": true,
+        "comment": "Sample interval in ms",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-config-mode",
+        "name": "mode",
+        "type": "uint8",
+        "length": null,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Operating mode",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      },
+      {
+        "id": "f-config-buffer",
+        "name": "buffer",
+        "type": "bytes",
+        "length": 32,
+        "defaultValue": null,
+        "optional": null,
+        "comment": "Config buffer",
+        "enumValues": null,
+        "structRef": null,
+        "fieldTag": null,
+        "minValue": null,
+        "maxValue": null,
+        "bitOffset": null,
+        "bitWidth": null,
+        "unionDiscriminant": null,
+        "endian": null
+      }
+    ]
+  }
+}
