@@ -54,20 +54,81 @@ interface ProtocolStore {
   resetProject: () => void;
 }
 
+const demoFields: ProtocolField[] = [
+  { id: 'f-sensor-id', name: 'sensor_id', type: 'uint8', comment: 'Sensor identifier (0-255)' },
+  { id: 'f-sensor-temp', name: 'temperature', type: 'float', comment: 'Temperature in Celsius' },
+  { id: 'f-sensor-humid', name: 'humidity', type: 'uint16', comment: 'Relative humidity %' },
+  { id: 'f-sensor-status', name: 'status', type: 'enum', comment: 'Sensor status code' },
+  { id: 'f-motor-rpm', name: 'rpm', type: 'uint16', comment: 'Motor speed in RPM' },
+  { id: 'f-motor-dir', name: 'direction', type: 'uint8', comment: '0=CW, 1=CCW' },
+  { id: 'f-motor-err', name: 'error_code', type: 'enum', comment: 'Motor error code' },
+  { id: 'f-config-interval', name: 'interval_ms', type: 'uint32', optional: true, comment: 'Sample interval in ms' },
+  { id: 'f-config-mode', name: 'mode', type: 'uint8', comment: 'Operating mode' },
+  { id: 'f-config-buffer', name: 'buffer', type: 'bytes', length: 32, comment: 'Config buffer' },
+];
+
+const demoMessages: ProtocolMessage[] = [
+  { id: 'msg-sensor', name: 'SensorData', fields: ['f-sensor-id', 'f-sensor-temp', 'f-sensor-humid', 'f-sensor-status'] },
+  { id: 'msg-motor', name: 'MotorCommand', fields: ['f-motor-rpm', 'f-motor-dir', 'f-motor-err'] },
+];
+
+const demoStructs: ProtocolStruct[] = [
+  { id: 'st-config', name: 'SensorConfig', fields: ['f-config-interval', 'f-config-mode', 'f-config-buffer'] },
+];
+
+const demoEnums: ProtocolEnum[] = [
+  { id: 'en-status', name: 'SensorStatus', values: { OK: 0, WARNING: 1, ERROR: 2, OFFLINE: 3 } },
+  { id: 'en-error', name: 'MotorError', values: { NONE: 0, OVERHEAT: 1, STALL: 2, OVERCURRENT: 3 } },
+];
+
 const defaultIR: ProtocolIR = {
   version: '1.0.0',
-  messages: [],
-  structs: [],
-  enums: [],
-  fields: [],
+  messages: demoMessages,
+  structs: demoStructs,
+  enums: demoEnums,
+  fields: demoFields,
 };
+
+const demoNodes: CanvasNode[] = [
+  { id: 'msg-sensor', type: 'message', position: { x: 80, y: 60 }, data: { label: 'SensorData' } },
+  { id: 'f-sensor-id', type: 'field', position: { x: 380, y: 20 }, data: { label: 'sensor_id', fieldType: 'uint8' } },
+  { id: 'f-sensor-temp', type: 'field', position: { x: 380, y: 100 }, data: { label: 'temperature', fieldType: 'float' } },
+  { id: 'f-sensor-humid', type: 'field', position: { x: 380, y: 180 }, data: { label: 'humidity', fieldType: 'uint16' } },
+  { id: 'f-sensor-status', type: 'field', position: { x: 380, y: 260 }, data: { label: 'status', fieldType: 'enum' } },
+
+  { id: 'msg-motor', type: 'message', position: { x: 80, y: 380 }, data: { label: 'MotorCommand' } },
+  { id: 'f-motor-rpm', type: 'field', position: { x: 380, y: 340 }, data: { label: 'rpm', fieldType: 'uint16' } },
+  { id: 'f-motor-dir', type: 'field', position: { x: 380, y: 420 }, data: { label: 'direction', fieldType: 'uint8' } },
+  { id: 'f-motor-err', type: 'field', position: { x: 380, y: 500 }, data: { label: 'error_code', fieldType: 'enum' } },
+
+  { id: 'st-config', type: 'struct', position: { x: 700, y: 60 }, data: { label: 'SensorConfig' } },
+  { id: 'f-config-interval', type: 'field', position: { x: 1000, y: 20 }, data: { label: 'interval_ms', fieldType: 'uint32' } },
+  { id: 'f-config-mode', type: 'field', position: { x: 1000, y: 100 }, data: { label: 'mode', fieldType: 'uint8' } },
+  { id: 'f-config-buffer', type: 'field', position: { x: 1000, y: 180 }, data: { label: 'buffer', fieldType: 'bytes' } },
+
+  { id: 'en-status', type: 'enum', position: { x: 700, y: 340 }, data: { label: 'SensorStatus' } },
+  { id: 'en-error', type: 'enum', position: { x: 700, y: 500 }, data: { label: 'MotorError' } },
+];
+
+const demoEdges: CanvasEdge[] = [
+  { id: 'e-sensor-id', source: 'msg-sensor', target: 'f-sensor-id' },
+  { id: 'e-sensor-temp', source: 'msg-sensor', target: 'f-sensor-temp' },
+  { id: 'e-sensor-humid', source: 'msg-sensor', target: 'f-sensor-humid' },
+  { id: 'e-sensor-status', source: 'msg-sensor', target: 'f-sensor-status' },
+  { id: 'e-motor-rpm', source: 'msg-motor', target: 'f-motor-rpm' },
+  { id: 'e-motor-dir', source: 'msg-motor', target: 'f-motor-dir' },
+  { id: 'e-motor-err', source: 'msg-motor', target: 'f-motor-err' },
+  { id: 'e-config-interval', source: 'st-config', target: 'f-config-interval' },
+  { id: 'e-config-mode', source: 'st-config', target: 'f-config-mode' },
+  { id: 'e-config-buffer', source: 'st-config', target: 'f-config-buffer' },
+];
 
 export const useProtocolStore = create<ProtocolStore>((set, get) => ({
   ir: { ...defaultIR },
-  nodes: [],
-  edges: [],
+  nodes: demoNodes,
+  edges: demoEdges,
   selectedNodeId: null,
-  projectName: 'Untitled Protocol',
+  projectName: 'Demo Protocol',
 
   setSelectedNode: (id) => set({ selectedNodeId: id }),
 
