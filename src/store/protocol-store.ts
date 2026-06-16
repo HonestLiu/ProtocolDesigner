@@ -50,6 +50,7 @@ interface ProtocolStore {
   getEnumById: (id: string) => ProtocolEnum | undefined;
 
   loadProject: (data: { name: string; ir: ProtocolIR }) => void;
+  toggleCrc: () => void;
   exportProject: () => { name: string; ir: ProtocolIR };
   resetProject: () => void;
 }
@@ -87,6 +88,7 @@ const defaultIR: ProtocolIR = {
   structs: demoStructs,
   enums: demoEnums,
   fields: demoFields,
+  crcEnabled: false,
 };
 
 const demoNodes: CanvasNode[] = [
@@ -305,6 +307,11 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
   addEdge: (edge) => set((s) => ({ edges: [...s.edges, edge] })),
 
   removeEdge: (id) => set((s) => ({ edges: s.edges.filter((e) => e.id !== id) })),
+
+  toggleCrc: () =>
+    set((s) => ({
+      ir: { ...s.ir, crcEnabled: !s.ir.crcEnabled },
+    })),
 
   getFieldById: (id) => get().ir.fields.find((f) => f.id === id),
   getMessageById: (id) => get().ir.messages.find((m) => m.id === id),

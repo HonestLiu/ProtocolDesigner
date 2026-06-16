@@ -55,6 +55,7 @@ export interface ProtocolIR {
   structs: ProtocolStruct[];
   enums: ProtocolEnum[];
   fields: ProtocolField[];
+  crcEnabled?: boolean;
 }
 
 export interface ProtocolProject {

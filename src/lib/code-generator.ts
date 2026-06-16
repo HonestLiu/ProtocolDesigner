@@ -47,11 +47,27 @@ function totalSize(fields: ProtocolField[], ir: ProtocolIR): number {
 }
 
 export function generateC(ir: ProtocolIR): string {
+  const crcEnabled = ir.crcEnabled ?? false;
   let out = `#include <stdint.h>\n#include <string.h>\n#include <stdbool.h>\n\n`;
 
   out += `#define PROTOCOL_MAGIC    0xAA55\n`;
   out += `#define PROTOCOL_VERSION  1\n`;
-  out += `#define PROTOCOL_HEADER_SIZE  6\n\n`;
+  out += `#define PROTOCOL_HEADER_SIZE  6\n`;
+  if (crcEnabled) {
+    out += `#define PROTOCOL_CRC_SIZE   2\n\n`;
+    out += `static inline uint16_t crc16(const uint8_t *data, size_t len) {\n`;
+    out += `    uint16_t crc = 0xFFFF;\n`;
+    out += `    for (size_t i = 0; i < len; i++) {\n`;
+    out += `        crc ^= (uint16_t)data[i] << 8;\n`;
+    out += `        for (int j = 0; j < 8; j++) {\n`;
+    out += `            if (crc & 0x8000) crc = (crc << 1) ^ 0x1021;\n`;
+    out += `            else crc <<= 1;\n`;
+    out += `        }\n`;
+    out += `    }\n`;
+    out += `    return crc;\n`;
+    out += `}\n`;
+  }
+  out += `\n`;
 
   // All sendable types (messages + structs) get a MsgType
   const allTypes = [
@@ -277,9 +293,10 @@ export function generateC(ir: ProtocolIR): string {
     for (const f of fields) out += decodeField(f, indent);
     out += `${indent}return offset;\n}\n\n`;
 
-    // Full packet encode (header + payload)
+    // Full packet encode (header + payload + optional CRC)
     out += `int encode_${t.name}(uint8_t *buf, size_t buf_len, const ${t.name} *msg) {\n`;
-    out += `${indent}if (buf_len < PROTOCOL_HEADER_SIZE + ${sz}) return -1;\n`;
+    const crcExtra = crcEnabled ? ' + PROTOCOL_CRC_SIZE' : '';
+    out += `${indent}if (buf_len < PROTOCOL_HEADER_SIZE + ${sz}${crcExtra}) return -1;\n`;
     out += `${indent}int offset = 0;\n`;
     out += `${indent}int hdr_ret = encode_header(buf + offset, buf_len - offset, MSG_TYPE_${t.name}, ${sz});\n`;
     out += `${indent}if (hdr_ret < 0) return hdr_ret;\n`;
@@ -287,6 +304,14 @@ export function generateC(ir: ProtocolIR): string {
     out += `${indent}int pay_ret = encode_${t.name}_payload(buf + offset, buf_len - offset, msg);\n`;
     out += `${indent}if (pay_ret < 0) return pay_ret;\n`;
     out += `${indent}offset += pay_ret;\n`;
+    if (crcEnabled) {
+      out += `${indent}{\n`;
+      out += `${indent}  uint16_t crc = crc16(buf, offset);\n`;
+      out += `${indent}  buf[offset]     = (uint8_t)(crc & 0xFF);\n`;
+      out += `${indent}  buf[offset + 1] = (uint8_t)((crc >> 8) & 0xFF);\n`;
+      out += `${indent}  offset += PROTOCOL_CRC_SIZE;\n`;
+      out += `${indent}}\n`;
+    }
     out += `${indent}return offset;\n}\n\n`;
 
     // Full packet decode (expects buf pointing to payload after header)
@@ -303,7 +328,14 @@ export function generateC(ir: ProtocolIR): string {
     out += `    int ret = decode_header(buf, buf_len, hdr);\n`;
     out += `    if (ret < 0) return ret;\n`;
     out += `    if (hdr->msg_type >= MSG_TYPE_COUNT) return -4;\n`;
-    out += `    if (buf_len < PROTOCOL_HEADER_SIZE + hdr->payload_len) return -5;\n`;
+    if (crcEnabled) {
+      out += `    if (buf_len < PROTOCOL_HEADER_SIZE + hdr->payload_len + PROTOCOL_CRC_SIZE) return -5;\n`;
+      out += `    uint16_t crc_stored = (uint16_t)buf[buf_len - 2] | ((uint16_t)buf[buf_len - 1] << 8);\n`;
+      out += `    uint16_t crc_calc = crc16(buf, buf_len - PROTOCOL_CRC_SIZE);\n`;
+      out += `    if (crc_stored != crc_calc) return -6;\n`;
+    } else {
+      out += `    if (buf_len < PROTOCOL_HEADER_SIZE + hdr->payload_len) return -5;\n`;
+    }
     out += `    *payload_buf = buf + PROTOCOL_HEADER_SIZE;\n`;
     out += `    *payload_len = hdr->payload_len;\n`;
     out += `    return hdr->msg_type;\n`;
@@ -314,11 +346,30 @@ export function generateC(ir: ProtocolIR): string {
 }
 
 export function generatePython(ir: ProtocolIR): string {
+  const crcEnabled = ir.crcEnabled ?? false;
   let out = `import struct\n\n`;
 
   out += `PROTOCOL_MAGIC = 0xAA55\n`;
   out += `PROTOCOL_VERSION = 1\n`;
-  out += `PROTOCOL_HEADER_SIZE = 6\n\n`;
+  out += `PROTOCOL_HEADER_SIZE = 6\n`;
+  if (crcEnabled) {
+    out += `PROTOCOL_CRC_SIZE = 2\n\n`;
+
+    out += `def _crc16(data: bytes) -> int:\n`;
+    out += `    """Compute CRC16-CCITT checksum."""\n`;
+    out += `    crc = 0xFFFF\n`;
+    out += `    for byte in data:\n`;
+    out += `        crc ^= byte << 8\n`;
+    out += `        for _ in range(8):\n`;
+    out += `            if crc & 0x8000:\n`;
+    out += `                crc = (crc << 1) ^ 0x1021\n`;
+    out += `            else:\n`;
+    out += `                crc <<= 1\n`;
+    out += `        crc &= 0xFFFF\n`;
+    out += `    return crc\n\n`;
+  } else {
+    out += `\n`;
+  }
 
   // MsgType enum
   if (ir.messages.length > 0) {
@@ -410,7 +461,12 @@ export function generatePython(ir: ProtocolIR): string {
       cls += `    def encode(self) -> bytes:\n`;
       cls += `        """Encode complete packet with header."""\n`;
       cls += `        payload = self.encode_payload()\n`;
-      cls += `        return encode_header(MsgType.${name}, len(payload)) + payload\n\n`;
+      cls += `        pkt = encode_header(MsgType.${name}, len(payload)) + payload\n`;
+      if (crcEnabled) {
+        cls += `        crc = _crc16(pkt)\n`;
+        cls += `        pkt += struct.pack("<H", crc)\n`;
+      }
+      cls += `        return pkt\n\n`;
     }
 
     return cls;
@@ -426,8 +482,17 @@ export function generatePython(ir: ProtocolIR): string {
     out += `def decode_packet(data: bytes) -> tuple:\n`;
     out += `    """\n`;
     out += `    Decode any packet. Returns (msg_type, message_object).\n`;
-    out += `    Raises ValueError on invalid header.\n`;
+    out += `    Raises ValueError on invalid header or CRC mismatch.\n`;
     out += `    """\n`;
+    if (crcEnabled) {
+      out += `    if len(data) < PROTOCOL_HEADER_SIZE + PROTOCOL_CRC_SIZE:\n`;
+      out += `        raise ValueError("Packet too small")\n`;
+      out += `    stored_crc = struct.unpack("<H", data[-PROTOCOL_CRC_SIZE:])[0]\n`;
+      out += `    calc_crc = _crc16(data[:-PROTOCOL_CRC_SIZE])\n`;
+      out += `    if stored_crc != calc_crc:\n`;
+      out += `        raise ValueError(f"CRC mismatch: {stored_crc:#06x} != {calc_crc:#06x}")\n`;
+      out += `    data = data[:-PROTOCOL_CRC_SIZE]\n`;
+    }
     out += `    _, _, msg_type, payload_len = decode_header(data)\n`;
     out += `    payload = data[PROTOCOL_HEADER_SIZE:PROTOCOL_HEADER_SIZE + payload_len]\n`;
     out += `    dispatch = {\n`;
@@ -455,11 +520,31 @@ function rustType(field: ProtocolField): string {
 }
 
 export function generateRust(ir: ProtocolIR): string {
+  const crcEnabled = ir.crcEnabled ?? false;
   let out = `use serde::{Deserialize, Serialize};\nuse std::io;\n\n`;
 
   out += `pub const PROTOCOL_MAGIC: u16 = 0xAA55;\n`;
   out += `pub const PROTOCOL_VERSION: u8 = 1;\n`;
-  out += `pub const PROTOCOL_HEADER_SIZE: usize = 6;\n\n`;
+  out += `pub const PROTOCOL_HEADER_SIZE: usize = 6;\n`;
+  if (crcEnabled) {
+    out += `pub const PROTOCOL_CRC_SIZE: usize = 2;\n\n`;
+
+    out += `pub fn crc16(data: &[u8]) -> u16 {\n`;
+    out += `    let mut crc: u16 = 0xFFFF;\n`;
+    out += `    for &byte in data {\n`;
+    out += `        crc ^= (byte as u16) << 8;\n`;
+    out += `        for _ in 0..8 {\n`;
+    out += `            if crc & 0x8000 != 0 {\n`;
+    out += `                crc = (crc << 1) ^ 0x1021;\n`;
+    out += `            } else {\n`;
+    out += `                crc <<= 1;\n`;
+    out += `            }\n`;
+    out += `        }\n`;
+    out += `    }\n`;
+    out += `    crc\n`;
+    out += `}\n`;
+  }
+  out += `\n`;
 
   // MsgType enum
   if (ir.messages.length > 0) {
@@ -651,12 +736,17 @@ export function generateRust(ir: ProtocolIR): string {
     out += `        Ok(Self { ${fields.map((f) => f.name).join(', ')} })\n`;
     out += `    }\n\n`;
 
-    // encode (full packet with header)
+    // encode (full packet with header + optional CRC)
+    const crcCap = crcEnabled ? ' + PROTOCOL_CRC_SIZE' : '';
     out += `    pub fn encode(&self) -> Vec<u8> {\n`;
-    out += `        let mut buf = Vec::with_capacity(PROTOCOL_HEADER_SIZE + Self::payload_size());\n`;
+    out += `        let mut buf = Vec::with_capacity(PROTOCOL_HEADER_SIZE + Self::payload_size()${crcCap});\n`;
     out += `        let header = ProtocolHeader::new(${idx} as u8, Self::payload_size() as u16);\n`;
     out += `        header.encode(&mut buf);\n`;
     out += `        self.encode_payload(&mut buf);\n`;
+    if (crcEnabled) {
+      out += `        let crc = crc16(&buf);\n`;
+      out += `        buf.extend_from_slice(&crc.to_le_bytes());\n`;
+    }
     out += `        buf\n`;
     out += `    }\n\n`;
 
@@ -675,8 +765,23 @@ export function generateRust(ir: ProtocolIR): string {
   // Generic decode function
   if (ir.messages.length > 0) {
     out += `pub fn decode_packet(buf: &[u8]) -> io::Result<(ProtocolHeader, Vec<u8>)> {\n`;
-    out += `    let header = ProtocolHeader::decode(buf)?;\n`;
-    out += `    let payload = buf[PROTOCOL_HEADER_SIZE..PROTOCOL_HEADER_SIZE + header.payload_len as usize].to_vec();\n`;
+    if (crcEnabled) {
+      out += `    let packet_len = buf.len();\n`;
+      out += `    if packet_len < PROTOCOL_HEADER_SIZE + PROTOCOL_CRC_SIZE {\n`;
+      out += `        return Err(io::Error::new(io::ErrorKind::InvalidData, "packet too small"));\n`;
+      out += `    }\n`;
+      out += `    let (data, crc_bytes) = buf.split_at(packet_len - PROTOCOL_CRC_SIZE);\n`;
+      out += `    let stored_crc = u16::from_le_bytes(crc_bytes.try_into().unwrap());\n`;
+      out += `    let calc_crc = crc16(data);\n`;
+      out += `    if stored_crc != calc_crc {\n`;
+      out += `        return Err(io::Error::new(io::ErrorKind::InvalidData, "CRC mismatch"));\n`;
+      out += `    }\n`;
+      out += `    let header = ProtocolHeader::decode(data)?;\n`;
+      out += `    let payload = data[PROTOCOL_HEADER_SIZE..PROTOCOL_HEADER_SIZE + header.payload_len as usize].to_vec();\n`;
+    } else {
+      out += `    let header = ProtocolHeader::decode(buf)?;\n`;
+      out += `    let payload = buf[PROTOCOL_HEADER_SIZE..PROTOCOL_HEADER_SIZE + header.payload_len as usize].to_vec();\n`;
+    }
     out += `    Ok((header, payload))\n`;
     out += `}\n\n`;
   }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useProtocolStore } from '@/store/protocol-store';
 import { generateC, generatePython, generateRust } from '@/lib/code-generator';
-import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X } from 'lucide-react';
+import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X, Copy, Check, ShieldCheck, Shield } from 'lucide-react';
 
 export function Toolbar() {
   const addMessage = useProtocolStore((s) => s.addMessage);
@@ -12,10 +12,22 @@ export function Toolbar() {
   const projectName = useProtocolStore((s) => s.projectName);
   const loadProject = useProtocolStore((s) => s.loadProject);
   const resetProject = useProtocolStore((s) => s.resetProject);
+  const toggleCrc = useProtocolStore((s) => s.toggleCrc);
 
   const [showCode, setShowCode] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState<'c' | 'python' | 'rust'>('c');
   const [generatedCode, setGeneratedCode] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard not available
+    }
+  };
 
   const handleAddMessage = () => {
     const name = `Msg${Date.now().toString(36).slice(-4).toUpperCase()}`;
@@ -145,6 +157,24 @@ export function Toolbar() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h2 className="text-sm font-semibold">Generated Code</h2>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleCrc();
+                    let code = '';
+                    const irc = { ...ir, crcEnabled: !ir.crcEnabled };
+                    if (codeLanguage === 'c') code = generateC(irc);
+                    else if (codeLanguage === 'python') code = generatePython(irc);
+                    else code = generateRust(irc);
+                    setGeneratedCode(code);
+                  }}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer
+                    ${ir.crcEnabled ? 'bg-amber-500/10 text-amber-500' : 'text-muted-foreground hover:text-foreground'}`}
+                  title="Enable CRC16 checksum"
+                >
+                  {ir.crcEnabled ? <ShieldCheck className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                  CRC
+                </button>
                 <div className="flex gap-1 bg-muted rounded-lg p-0.5">
                   {(['c', 'python', 'rust'] as const).map((lang) => (
                     <button
@@ -174,7 +204,17 @@ export function Toolbar() {
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto p-4 bg-zinc-950 rounded-b-xl">
+            <div className="flex-1 overflow-auto p-4 bg-zinc-950 rounded-b-xl relative group">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="absolute top-3 right-3 size-7 rounded-md flex items-center justify-center
+                  bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200
+                  transition-all opacity-0 group-hover:opacity-100 cursor-pointer z-10"
+                title="Copy code"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
               <pre className="text-sm text-green-400 font-mono whitespace-pre-wrap">
                 {generatedCode || '// Add messages and click Generate Code'}
               </pre>
