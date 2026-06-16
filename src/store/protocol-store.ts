@@ -51,6 +51,7 @@ interface ProtocolStore {
 
   loadProject: (data: { name: string; ir: ProtocolIR }) => void;
   toggleCrc: () => void;
+  toggleTlv: () => void;
   exportProject: () => { name: string; ir: ProtocolIR };
   resetProject: () => void;
 }
@@ -89,6 +90,7 @@ const defaultIR: ProtocolIR = {
   enums: demoEnums,
   fields: demoFields,
   crcEnabled: false,
+  tlvEnabled: false,
 };
 
 const demoNodes: CanvasNode[] = [
@@ -311,6 +313,11 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
   toggleCrc: () =>
     set((s) => ({
       ir: { ...s.ir, crcEnabled: !s.ir.crcEnabled },
+    })),
+
+  toggleTlv: () =>
+    set((s) => ({
+      ir: { ...s.ir, tlvEnabled: !s.ir.tlvEnabled },
     })),
 
   getFieldById: (id) => get().ir.fields.find((f) => f.id === id),

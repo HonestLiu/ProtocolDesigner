@@ -13,6 +13,7 @@ const FIELD_TYPES: FieldType[] = [
   'uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32',
   'uint64', 'int64', 'float', 'double', 'bool', 'char',
   'string', 'bytes', 'struct', 'enum', 'array',
+  'vstring', 'vbytes',
 ];
 
 export function PropertiesPanel() {
@@ -21,6 +22,7 @@ export function PropertiesPanel() {
   const messages = useProtocolStore((s) => s.ir.messages);
   const structs = useProtocolStore((s) => s.ir.structs);
   const enums = useProtocolStore((s) => s.ir.enums);
+  const tlvEnabled = useProtocolStore((s) => s.ir.tlvEnabled ?? false);
   const updateField = useProtocolStore((s) => s.updateField);
   const updateMessage = useProtocolStore((s) => s.updateMessage);
   const updateStruct = useProtocolStore((s) => s.updateStruct);
@@ -117,6 +119,21 @@ export function PropertiesPanel() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {tlvEnabled && (
+                <div className="space-y-2">
+                  <Label className="text-xs">TLV Tag</Label>
+                  <Input
+                    type="number"
+                    value={selectedField.fieldTag ?? ''}
+                    onChange={(e) => updateField(selectedNodeId!, { fieldTag: parseInt(e.target.value) || undefined })}
+                    placeholder="Auto"
+                    className="h-8 text-sm"
+                    min={0}
+                    max={255}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label className="text-xs">Length</Label>

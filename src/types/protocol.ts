@@ -15,7 +15,9 @@ export type FieldType =
   | 'bytes'
   | 'struct'
   | 'enum'
-  | 'array';
+  | 'array'
+  | 'vstring'
+  | 'vbytes';
 
 export type NodeType = 'message' | 'field' | 'struct' | 'enum';
 
@@ -29,6 +31,7 @@ export interface ProtocolField {
   comment?: string;
   enumValues?: Record<string, number>;
   structRef?: string;
+  fieldTag?: number;
 }
 
 export interface ProtocolMessage {
@@ -56,6 +59,7 @@ export interface ProtocolIR {
   enums: ProtocolEnum[];
   fields: ProtocolField[];
   crcEnabled?: boolean;
+  tlvEnabled?: boolean;
 }
 
 export interface ProtocolProject {

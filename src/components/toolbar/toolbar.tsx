@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useProtocolStore } from '@/store/protocol-store';
 import { generateC, generatePython, generateRust } from '@/lib/code-generator';
-import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X, Copy, Check, ShieldCheck, Shield } from 'lucide-react';
+import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X, Copy, Check, ShieldCheck, Shield, Tag } from 'lucide-react';
 
 export function Toolbar() {
   const addMessage = useProtocolStore((s) => s.addMessage);
@@ -13,6 +13,7 @@ export function Toolbar() {
   const loadProject = useProtocolStore((s) => s.loadProject);
   const resetProject = useProtocolStore((s) => s.resetProject);
   const toggleCrc = useProtocolStore((s) => s.toggleCrc);
+  const toggleTlv = useProtocolStore((s) => s.toggleTlv);
 
   const [showCode, setShowCode] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState<'c' | 'python' | 'rust'>('c');
@@ -174,6 +175,24 @@ export function Toolbar() {
                 >
                   {ir.crcEnabled ? <ShieldCheck className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
                   CRC
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleTlv();
+                    let code = '';
+                    const irt = { ...ir, tlvEnabled: !ir.tlvEnabled };
+                    if (codeLanguage === 'c') code = generateC(irt);
+                    else if (codeLanguage === 'python') code = generatePython(irt);
+                    else code = generateRust(irt);
+                    setGeneratedCode(code);
+                  }}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer
+                    ${ir.tlvEnabled ? 'bg-sky-500/10 text-sky-500' : 'text-muted-foreground hover:text-foreground'}`}
+                  title="Enable TLV (Type-Length-Value) encoding"
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  TLV
                 </button>
                 <div className="flex gap-1 bg-muted rounded-lg p-0.5">
                   {(['c', 'python', 'rust'] as const).map((lang) => (
