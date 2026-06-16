@@ -21,6 +21,29 @@ export type FieldType =
 
 export type NodeType = 'message' | 'field' | 'struct' | 'enum';
 
+export type ProtocolLevel = 0 | 1 | 2 | 3 | 4;
+export type Endianness = 'little' | 'big';
+
+export interface ProtocolModules {
+  // Level 1: Basic
+  header: boolean;
+  structTypes: boolean;
+  enumTypes: boolean;
+  // Level 2: Engineering
+  crc: boolean;
+  optionalFields: boolean;
+  rangeChecks: boolean;
+  validation: boolean;
+  // Level 3: Industrial
+  tlv: boolean;
+  versionField: boolean;
+  forwardCompat: boolean;
+  // Level 4: Full
+  bitfields: boolean;
+  unions: boolean;
+  endianControl: boolean;
+}
+
 export interface ProtocolField {
   id: string;
   name: string;
@@ -32,6 +55,14 @@ export interface ProtocolField {
   enumValues?: Record<string, number>;
   structRef?: string;
   fieldTag?: number;
+  // Level 2: range checks
+  minValue?: number;
+  maxValue?: number;
+  // Level 4: advanced
+  bitOffset?: number;
+  bitWidth?: number;
+  unionDiscriminant?: number;
+  endian?: Endianness;
 }
 
 export interface ProtocolMessage {
@@ -54,11 +85,16 @@ export interface ProtocolEnum {
 
 export interface ProtocolIR {
   version: string;
+  level: ProtocolLevel;
+  modules: ProtocolModules;
+  endian: Endianness;
   messages: ProtocolMessage[];
   structs: ProtocolStruct[];
   enums: ProtocolEnum[];
   fields: ProtocolField[];
+  /** @deprecated Use level + modules instead */
   crcEnabled?: boolean;
+  /** @deprecated Use level + modules instead */
   tlvEnabled?: boolean;
 }
 

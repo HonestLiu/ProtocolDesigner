@@ -1,13 +1,10 @@
 import { create } from 'zustand';
 import type {
-  ProtocolIR,
-  ProtocolField,
-  ProtocolMessage,
-  ProtocolStruct,
-  ProtocolEnum,
-  CanvasNode,
-  CanvasEdge,
+  ProtocolIR, ProtocolLevel, ProtocolModules, Endianness,
+  ProtocolField, ProtocolMessage, ProtocolStruct, ProtocolEnum,
+  CanvasNode, CanvasEdge,
 } from '@/types/protocol';
+import { LEVEL_DEFAULTS } from '@/lib/codegen/shared';
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -49,9 +46,10 @@ interface ProtocolStore {
   getStructById: (id: string) => ProtocolStruct | undefined;
   getEnumById: (id: string) => ProtocolEnum | undefined;
 
+  setLevel: (level: ProtocolLevel) => void;
+  setModules: (overrides: Partial<ProtocolModules>) => void;
+  setEndian: (endian: Endianness) => void;
   loadProject: (data: { name: string; ir: ProtocolIR }) => void;
-  toggleCrc: () => void;
-  toggleTlv: () => void;
   exportProject: () => { name: string; ir: ProtocolIR };
   resetProject: () => void;
 }
@@ -85,12 +83,13 @@ const demoEnums: ProtocolEnum[] = [
 
 const defaultIR: ProtocolIR = {
   version: '1.0.0',
+  level: 1,
+  modules: LEVEL_DEFAULTS[1],
+  endian: 'little',
   messages: demoMessages,
   structs: demoStructs,
   enums: demoEnums,
   fields: demoFields,
-  crcEnabled: false,
-  tlvEnabled: false,
 };
 
 const demoNodes: CanvasNode[] = [
@@ -310,14 +309,26 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
 
   removeEdge: (id) => set((s) => ({ edges: s.edges.filter((e) => e.id !== id) })),
 
-  toggleCrc: () =>
+  setLevel: (level) =>
     set((s) => ({
-      ir: { ...s.ir, crcEnabled: !s.ir.crcEnabled },
+      ir: {
+        ...s.ir,
+        level,
+        modules: { ...LEVEL_DEFAULTS[level] },
+      },
     })),
 
-  toggleTlv: () =>
+  setModules: (overrides) =>
     set((s) => ({
-      ir: { ...s.ir, tlvEnabled: !s.ir.tlvEnabled },
+      ir: {
+        ...s.ir,
+        modules: { ...s.ir.modules, ...overrides },
+      },
+    })),
+
+  setEndian: (endian) =>
+    set((s) => ({
+      ir: { ...s.ir, endian },
     })),
 
   getFieldById: (id) => get().ir.fields.find((f) => f.id === id),
@@ -325,14 +336,30 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
   getStructById: (id) => get().ir.structs.find((s) => s.id === id),
   getEnumById: (id) => get().ir.enums.find((e) => e.id === id),
 
-  loadProject: (data) =>
-    set({
+  loadProject: (data) => {
+    // Migrate old-format JSON (crcEnabled/tlvEnabled) to new level system
+    const ir = data.ir as ProtocolIR & { crcEnabled?: boolean; tlvEnabled?: boolean };
+    if (ir.level === undefined && (ir.crcEnabled !== undefined || ir.tlvEnabled !== undefined)) {
+      const oldCrc = ir.crcEnabled ?? false;
+      const oldTlv = ir.tlvEnabled ?? false;
+      let level: ProtocolLevel = 1;
+      if (oldCrc && oldTlv) level = 3;
+      else if (oldTlv) level = 3;
+      else if (oldCrc) level = 2;
+      ir.level = level;
+      ir.modules = { ...LEVEL_DEFAULTS[level] };
+      ir.endian = 'little';
+      delete ir.crcEnabled;
+      delete ir.tlvEnabled;
+    }
+    return set({
       projectName: data.name,
-      ir: data.ir,
+      ir: ir as ProtocolIR,
       nodes: [],
       edges: [],
       selectedNodeId: null,
-    }),
+    });
+  },
 
   exportProject: () => ({
     name: get().projectName,

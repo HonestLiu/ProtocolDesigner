@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useProtocolStore } from '@/store/protocol-store';
 import { generateC, generatePython, generateRust } from '@/lib/code-generator';
-import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X, Copy, Check, ShieldCheck, Shield, Tag } from 'lucide-react';
+import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X, Copy, Check, Settings2, ShieldCheck, Tag } from 'lucide-react';
+import { ProtocolSettingsDialog, getLevelShortLabel, getLevelColor } from './protocol-settings';
+import { resolveModules } from '@/lib/codegen/shared';
 
 export function Toolbar() {
   const addMessage = useProtocolStore((s) => s.addMessage);
@@ -12,13 +14,14 @@ export function Toolbar() {
   const projectName = useProtocolStore((s) => s.projectName);
   const loadProject = useProtocolStore((s) => s.loadProject);
   const resetProject = useProtocolStore((s) => s.resetProject);
-  const toggleCrc = useProtocolStore((s) => s.toggleCrc);
-  const toggleTlv = useProtocolStore((s) => s.toggleTlv);
 
   const [showCode, setShowCode] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState<'c' | 'python' | 'rust'>('c');
   const [generatedCode, setGeneratedCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const modules = resolveModules(ir);
 
   const handleCopy = async () => {
     try {
@@ -58,6 +61,14 @@ export function Toolbar() {
     else code = generateRust(ir);
     setGeneratedCode(code);
     setShowCode(true);
+  };
+
+  const handleRegenerate = () => {
+    let code = '';
+    if (codeLanguage === 'c') code = generateC(ir);
+    else if (codeLanguage === 'python') code = generatePython(ir);
+    else code = generateRust(ir);
+    setGeneratedCode(code);
   };
 
   const handleSave = () => {
@@ -118,8 +129,12 @@ export function Toolbar() {
     </button>
   );
 
+  const levelLabel = getLevelShortLabel(ir.level);
+  const levelColor = getLevelColor(ir.level);
+
   return (
     <>
+      {/* Main Toolbar */}
       <div className="h-12 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-4 gap-2 select-none">
         <div className="flex items-center gap-2 mr-4">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
@@ -139,6 +154,21 @@ export function Toolbar() {
 
         <div className="h-6 w-px bg-border" />
 
+        {/* Level indicator badge */}
+        <button
+          type="button"
+          onClick={() => setShowSettings(true)}
+          className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-[11px] font-mono font-semibold
+            bg-muted/60 hover:bg-muted transition-colors cursor-pointer select-none"
+          title="Click to change protocol level"
+        >
+          <Settings2 className="w-3 h-3 text-muted-foreground" />
+          <span className={levelColor}>{levelLabel}</span>
+          <span className="text-muted-foreground">
+            {ir.level === 0 ? 'Minimal' : ir.level === 1 ? 'Basic' : ir.level === 2 ? 'Engineering' : ir.level === 3 ? 'Industrial' : 'Full'}
+          </span>
+        </button>
+
         <ToolbarButton onClick={() => handleGenerateCode()} icon={Code2} label="Generate Code" color="" />
 
         <div className="flex-1" />
@@ -150,6 +180,7 @@ export function Toolbar() {
         </div>
       </div>
 
+      {/* Generated Code Modal */}
       {showCode && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={() => setShowCode(false)}>
@@ -158,42 +189,33 @@ export function Toolbar() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h2 className="text-sm font-semibold">Generated Code</h2>
               <div className="flex items-center gap-2">
+                {/* Level badge */}
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${levelColor} bg-muted/50`}>
+                  {levelLabel}
+                </span>
+                {/* Settings button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    toggleCrc();
-                    let code = '';
-                    const irc = { ...ir, crcEnabled: !ir.crcEnabled };
-                    if (codeLanguage === 'c') code = generateC(irc);
-                    else if (codeLanguage === 'python') code = generatePython(irc);
-                    else code = generateRust(irc);
-                    setGeneratedCode(code);
-                  }}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer
-                    ${ir.crcEnabled ? 'bg-amber-500/10 text-amber-500' : 'text-muted-foreground hover:text-foreground'}`}
-                  title="Enable CRC16 checksum"
+                  onClick={() => setShowSettings(true)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium
+                    text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  title="Protocol Settings"
                 >
-                  {ir.crcEnabled ? <ShieldCheck className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
-                  CRC
+                  <Settings2 className="w-3.5 h-3.5" />
+                  Settings
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleTlv();
-                    let code = '';
-                    const irt = { ...ir, tlvEnabled: !ir.tlvEnabled };
-                    if (codeLanguage === 'c') code = generateC(irt);
-                    else if (codeLanguage === 'python') code = generatePython(irt);
-                    else code = generateRust(irt);
-                    setGeneratedCode(code);
-                  }}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer
-                    ${ir.tlvEnabled ? 'bg-sky-500/10 text-sky-500' : 'text-muted-foreground hover:text-foreground'}`}
-                  title="Enable TLV (Type-Length-Value) encoding"
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                  TLV
-                </button>
+                {/* Active module badges */}
+                {modules.crc && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-500">
+                    <ShieldCheck className="w-3 h-3" />CRC
+                  </span>
+                )}
+                {modules.tlv && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-500/10 text-sky-500">
+                    <Tag className="w-3 h-3" />TLV
+                  </span>
+                )}
+                {/* Language tabs */}
                 <div className="flex gap-1 bg-muted rounded-lg p-0.5">
                   {(['c', 'python', 'rust'] as const).map((lang) => (
                     <button
@@ -241,6 +263,16 @@ export function Toolbar() {
           </div>
         </div>
       )}
+
+      {/* Protocol Settings Dialog */}
+      <ProtocolSettingsDialog
+        open={showSettings}
+        onClose={() => {
+          setShowSettings(false);
+          // Regenerate code if modal is open
+          if (showCode) handleRegenerate();
+        }}
+      />
     </>
   );
 }

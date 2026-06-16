@@ -7,7 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { FieldType } from '@/types/protocol';
+import type { FieldType, Endianness } from '@/types/protocol';
+import { resolveModules } from '@/lib/codegen/shared';
 
 const FIELD_TYPES: FieldType[] = [
   'uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32',
@@ -22,7 +23,10 @@ export function PropertiesPanel() {
   const messages = useProtocolStore((s) => s.ir.messages);
   const structs = useProtocolStore((s) => s.ir.structs);
   const enums = useProtocolStore((s) => s.ir.enums);
-  const tlvEnabled = useProtocolStore((s) => s.ir.tlvEnabled ?? false);
+  const tlvEnabled = useProtocolStore((s) => resolveModules(s.ir).tlv);
+  const rangeChecks = useProtocolStore((s) => resolveModules(s.ir).rangeChecks);
+  const bitfields = useProtocolStore((s) => resolveModules(s.ir).bitfields);
+  const endianControl = useProtocolStore((s) => resolveModules(s.ir).endianControl);
   const updateField = useProtocolStore((s) => s.updateField);
   const updateMessage = useProtocolStore((s) => s.updateMessage);
   const updateStruct = useProtocolStore((s) => s.updateStruct);
@@ -175,6 +179,82 @@ export function PropertiesPanel() {
                 />
                 <Label className="text-xs">Optional</Label>
               </div>
+
+              {rangeChecks && (
+                <div className="flex gap-2">
+                  <div className="space-y-2 flex-1">
+                    <Label className="text-xs">Min Value</Label>
+                    <Input
+                      type="number"
+                      value={selectedField.minValue ?? ''}
+                      onChange={(e) => updateField(selectedNodeId!, { minValue: parseFloat(e.target.value) || undefined })}
+                      placeholder="None"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <Label className="text-xs">Max Value</Label>
+                    <Input
+                      type="number"
+                      value={selectedField.maxValue ?? ''}
+                      onChange={(e) => updateField(selectedNodeId!, { maxValue: parseFloat(e.target.value) || undefined })}
+                      placeholder="None"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {bitfields && (
+                <div className="flex gap-2">
+                  <div className="space-y-2 flex-1">
+                    <Label className="text-xs">Bit Offset</Label>
+                    <Input
+                      type="number"
+                      value={selectedField.bitOffset ?? ''}
+                      onChange={(e) => updateField(selectedNodeId!, { bitOffset: parseInt(e.target.value) || undefined })}
+                      placeholder="0"
+                      className="h-8 text-sm"
+                      min={0}
+                      max={7}
+                    />
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <Label className="text-xs">Bit Width</Label>
+                    <Input
+                      type="number"
+                      value={selectedField.bitWidth ?? ''}
+                      onChange={(e) => updateField(selectedNodeId!, { bitWidth: parseInt(e.target.value) || undefined })}
+                      placeholder="1"
+                      className="h-8 text-sm"
+                      min={1}
+                      max={32}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {endianControl && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Endian Override</Label>
+                  <Select
+                    value={selectedField.endian || 'none'}
+                    onValueChange={(v: string) => {
+                      if (v === 'none') updateField(selectedNodeId!, { endian: undefined });
+                      else updateField(selectedNodeId!, { endian: v as Endianness });
+                    }}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Default (little)</SelectItem>
+                      <SelectItem value="little">Little Endian</SelectItem>
+                      <SelectItem value="big">Big Endian</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </>
           )}
 
