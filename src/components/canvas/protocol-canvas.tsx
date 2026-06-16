@@ -1,10 +1,11 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
   type NodeTypes,
+  type NodeRemoveChange,
   BackgroundVariant,
   type OnNodeDrag,
   type OnNodesChange,
@@ -21,7 +22,6 @@ import { FieldNode } from '@/components/nodes/field-node';
 import { StructNode } from '@/components/nodes/struct-node';
 import { EnumNode } from '@/components/nodes/enum-node';
 import type { Node, Edge } from '@xyflow/react';
-import { useState } from 'react';
 
 const nodeTypes: NodeTypes = {
   message: MessageNode,
@@ -69,6 +69,19 @@ export function ProtocolCanvas() {
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
+      // Sync node deletions to the store
+      for (const change of changes) {
+        if (change.type === 'remove') {
+          const id = (change as NodeRemoveChange).id;
+          const store = useProtocolStore.getState();
+          const node = store.nodes.find((n) => n.id === id);
+          if (!node) continue;
+          if (node.type === 'field') store.removeField(id);
+          else if (node.type === 'message') store.removeMessage(id);
+          else if (node.type === 'struct') store.removeStruct(id);
+          else if (node.type === 'enum') store.removeEnum(id);
+        }
+      }
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     []
@@ -76,6 +89,12 @@ export function ProtocolCanvas() {
 
   const onEdgesChange: OnEdgesChange = useCallback(
     (changes) => {
+      // Sync edge deletions to the store
+      for (const change of changes) {
+        if (change.type === 'remove') {
+          useProtocolStore.getState().removeEdge(change.id);
+        }
+      }
       setEdges((eds) => applyEdgeChanges(changes, eds));
     },
     []

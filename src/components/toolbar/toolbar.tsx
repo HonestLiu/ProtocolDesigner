@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useProtocolStore } from '@/store/protocol-store';
 import { generateC, generatePython, generateRust } from '@/lib/code-generator';
-import { FileText, Box, List, Hash, Download, Upload, RotateCcw, Code2, X, Copy, Check, Settings2, ShieldCheck, Tag } from 'lucide-react';
+import { FileText, Box, List, Hash, Save, FolderOpen, FilePlus, Code2, X, Copy, Check, Settings2, ShieldCheck, Tag } from 'lucide-react';
 import { ProtocolSettingsDialog, getLevelShortLabel, getLevelColor } from './protocol-settings';
 import { resolveModules } from '@/lib/codegen/shared';
 import { downloadText, normalizeProjectFile, projectDownloadName } from '@/lib/project-file';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export function Toolbar() {
   const addMessage = useProtocolStore((s) => s.addMessage);
@@ -13,18 +22,113 @@ export function Toolbar() {
   const addField = useProtocolStore((s) => s.addField);
   const ir = useProtocolStore((s) => s.ir);
   const projectName = useProtocolStore((s) => s.projectName);
+  const currentFilePath = useProtocolStore((s) => s.currentFilePath);
+  const isDirty = useProtocolStore((s) => s.isDirty);
   const loadProject = useProtocolStore((s) => s.loadProject);
   const exportProject = useProtocolStore((s) => s.exportProject);
   const resetProject = useProtocolStore((s) => s.resetProject);
+  const setCurrentFilePath = useProtocolStore((s) => s.setCurrentFilePath);
+  const markClean = useProtocolStore((s) => s.markClean);
 
   const [showCode, setShowCode] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState<'c' | 'python' | 'rust'>('c');
   const [generatedCode, setGeneratedCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+  const [showLocalizePrompt, setShowLocalizePrompt] = useState(false);
 
   const modules = resolveModules(ir);
+
+  const currentFileLabel = currentFilePath ? currentFilePath.split(/[\\/]/).pop() || currentFilePath : '未本地化';
+  const fileStatus = currentFilePath ? (isDirty ? '● 未保存' : '已保存') : '未本地化';
+
+  const persistProject = async (path: string) => {
+    const project = exportProject();
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('save_protocol', { project, path });
+    markClean();
+    setCurrentFilePath(path);
+  };
+
+  const saveCurrentProject = async () => {
+    if (!currentFilePath) {
+      setShowLocalizePrompt(true);
+      return false;
+    }
+
+    try {
+      await persistProject(currentFilePath);
+      return true;
+    } catch {
+      const project = exportProject();
+      downloadText(projectDownloadName(project.name), JSON.stringify(project, null, 2));
+      markClean();
+      return true;
+    }
+  };
+
+  const getDefaultSavePath = async (name: string): Promise<string> => {
+    try {
+      const { documentDir } = await import('@tauri-apps/api/path');
+      return `${await documentDir()}${projectDownloadName(name)}`;
+    } catch {
+      return projectDownloadName(name);
+    }
+  };
+
+  const chooseLocalFileAndSave = async () => {
+    const project = exportProject();
+    try {
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const filePath = await save({
+        filters: [{ name: 'Protocol Designer File', extensions: ['pdc'] }],
+        defaultPath: await getDefaultSavePath(project.name),
+      });
+
+      if (!filePath) return false;
+      await persistProject(filePath);
+      setShowLocalizePrompt(false);
+      return true;
+    } catch {
+      downloadText(projectDownloadName(project.name), JSON.stringify(project, null, 2));
+      markClean();
+      setShowLocalizePrompt(false);
+      return true;
+    }
+  };
+
+  // Auto-save timer disabled temporarily for crash investigation.
+  // Save manually with Ctrl+S or via the Save button.
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        if (!currentFilePath) {
+          setShowLocalizePrompt(true);
+          return;
+        }
+        saveCurrentProject().catch((e) => console.error('Ctrl+S save failed:', e));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentFilePath, isDirty, exportProject]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isDirty) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  // Close handling is done via beforeunload above (compatible with both browser and Tauri).
 
   const handleCopy = async () => {
     try {
@@ -74,27 +178,6 @@ export function Toolbar() {
     setGeneratedCode(code);
   };
 
-  const saveProjectToFile = async (project: ReturnType<typeof exportProject>, json: string, suggestedName: string) => {
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      let filePath = currentFilePath;
-
-      if (!filePath) {
-        const { save } = await import('@tauri-apps/plugin-dialog');
-        filePath = await save({
-          filters: [{ name: 'Protocol Designer File', extensions: ['pdc'] }],
-          defaultPath: projectDownloadName(suggestedName),
-        });
-        if (!filePath) return;
-        setCurrentFilePath(filePath);
-      }
-
-      await invoke('save_protocol', { project, path: filePath });
-    } catch {
-      downloadText(projectDownloadName(suggestedName), json);
-    }
-  };
-
   const loadProjectFromData = (value: unknown, fallbackName = projectName) => {
     const project = normalizeProjectFile(value, fallbackName);
     if (!project) {
@@ -106,9 +189,10 @@ export function Toolbar() {
   };
 
   const handleSave = async () => {
-    const data = exportProject();
-    const json = JSON.stringify(data, null, 2);
-    await saveProjectToFile(data, json, data.name);
+    const saved = await saveCurrentProject();
+    if (!saved) {
+      setShowLocalizePrompt(true);
+    }
   };
 
   const handleLoad = async () => {
@@ -123,7 +207,7 @@ export function Toolbar() {
       if (typeof filePath !== 'string' || !filePath) return;
 
       const project = await invoke('load_protocol', { path: filePath });
-      loadProject(project);
+      loadProject(project as Parameters<typeof loadProject>[0]);
       setCurrentFilePath(filePath);
       return;
     } catch {
@@ -225,12 +309,39 @@ export function Toolbar() {
 
         <div className="flex-1" />
 
+        <div className="hidden md:flex items-center gap-2 max-w-[360px] px-3 py-1.5 rounded-lg border border-border bg-muted/30 text-xs">
+          <span className="text-muted-foreground whitespace-nowrap">当前文件</span>
+          <span className="min-w-0 truncate font-medium">{currentFileLabel}</span>
+          <span className={isDirty ? 'text-amber-500 whitespace-nowrap' : 'text-muted-foreground whitespace-nowrap'}>{fileStatus}</span>
+        </div>
+
         <div className="flex items-center gap-1">
-          <IconButton onClick={handleSave} icon={Download} title="Save" />
-          <IconButton onClick={handleLoad} icon={Upload} title="Load" />
-          <IconButton onClick={() => { resetProject(); setCurrentFilePath(null); }} icon={RotateCcw} title="New" />
+          <IconButton onClick={handleSave} icon={Save} title="保存 (Ctrl+S)" />
+          <IconButton onClick={handleLoad} icon={FolderOpen} title="导入" />
+          <IconButton onClick={() => { resetProject(); setCurrentFilePath(null); }} icon={FilePlus} title="New" />
         </div>
       </div>
+
+      <Dialog open={showLocalizePrompt} onOpenChange={(open) => {
+        setShowLocalizePrompt(open);
+      }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>当前资料尚未本地化</DialogTitle>
+            <DialogDescription>当前资料尚未本地化，是否先保存为本地文件？</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowLocalizePrompt(false);
+            }}>
+              取消
+            </Button>
+            <Button onClick={() => { void chooseLocalFileAndSave(); }}>
+              先保存为本地文件
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Generated Code Modal */}
       {showCode && (

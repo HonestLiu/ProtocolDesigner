@@ -1,5 +1,5 @@
 {
-  "name": "Untitled Protocol",
+  "name": "Demo Protocol",
   "ir": {
     "version": "1.0.0",
     "level": 1,
@@ -41,8 +41,8 @@
         ]
       },
       {
-        "id": "1781602661529-j358x7e",
-        "name": "Struct83O9",
+        "id": "1781607109796-mruydyt",
+        "name": "StructVFZ8",
         "fields": []
       }
     ],
@@ -51,20 +51,20 @@
         "id": "en-status",
         "name": "SensorStatus",
         "values": {
-          "WARNING": 1,
-          "ERROR": 2,
+          "OK": 0,
           "OFFLINE": 3,
-          "OK": 0
+          "WARNING": 1,
+          "ERROR": 2
         }
       },
       {
         "id": "en-error",
         "name": "MotorError",
         "values": {
+          "OVERCURRENT": 3,
           "STALL": 2,
-          "OVERHEAT": 1,
           "NONE": 0,
-          "OVERCURRENT": 3
+          "OVERHEAT": 1
         }
       }
     ],
@@ -250,166 +250,5 @@
         "endian": null
       }
     ]
-  },
-  "nodes": [
-    {
-      "data": {
-        "label": "MotorCommand"
-      },
-      "id": "msg-motor",
-      "position": {
-        "x": 80,
-        "y": 60
-      },
-      "type": "message"
-    },
-    {
-      "data": {
-        "fieldType": "uint16",
-        "label": "rpm"
-      },
-      "id": "f-motor-rpm",
-      "position": {
-        "x": 380,
-        "y": 60
-      },
-      "type": "field"
-    },
-    {
-      "data": {
-        "fieldType": "uint8",
-        "label": "direction"
-      },
-      "id": "f-motor-dir",
-      "position": {
-        "x": 380,
-        "y": 140
-      },
-      "type": "field"
-    },
-    {
-      "data": {
-        "fieldType": "enum",
-        "label": "error_code"
-      },
-      "id": "f-motor-err",
-      "position": {
-        "x": 380,
-        "y": 220
-      },
-      "type": "field"
-    },
-    {
-      "data": {
-        "label": "SensorConfig"
-      },
-      "id": "st-config",
-      "position": {
-        "x": 700,
-        "y": 60
-      },
-      "type": "struct"
-    },
-    {
-      "data": {
-        "fieldType": "uint32",
-        "label": "interval_ms"
-      },
-      "id": "f-config-interval",
-      "position": {
-        "x": 1000,
-        "y": 60
-      },
-      "type": "field"
-    },
-    {
-      "data": {
-        "fieldType": "uint8",
-        "label": "mode"
-      },
-      "id": "f-config-mode",
-      "position": {
-        "x": 1000,
-        "y": 140
-      },
-      "type": "field"
-    },
-    {
-      "data": {
-        "fieldType": "bytes",
-        "label": "buffer"
-      },
-      "id": "f-config-buffer",
-      "position": {
-        "x": 1000,
-        "y": 220
-      },
-      "type": "field"
-    },
-    {
-      "data": {
-        "label": "Struct83O9"
-      },
-      "id": "1781602661529-j358x7e",
-      "position": {
-        "x": 700,
-        "y": 340
-      },
-      "type": "struct"
-    },
-    {
-      "data": {
-        "label": "SensorStatus"
-      },
-      "id": "en-status",
-      "position": {
-        "x": 700,
-        "y": 380
-      },
-      "type": "enum"
-    },
-    {
-      "data": {
-        "label": "MotorError"
-      },
-      "id": "en-error",
-      "position": {
-        "x": 700,
-        "y": 460
-      },
-      "type": "enum"
-    }
-  ],
-  "edges": [
-    {
-      "id": "msg-motor-f-motor-rpm",
-      "source": "msg-motor",
-      "target": "f-motor-rpm"
-    },
-    {
-      "id": "msg-motor-f-motor-dir",
-      "source": "msg-motor",
-      "target": "f-motor-dir"
-    },
-    {
-      "id": "msg-motor-f-motor-err",
-      "source": "msg-motor",
-      "target": "f-motor-err"
-    },
-    {
-      "id": "st-config-f-config-interval",
-      "source": "st-config",
-      "target": "f-config-interval"
-    },
-    {
-      "id": "st-config-f-config-mode",
-      "source": "st-config",
-      "target": "f-config-mode"
-    },
-    {
-      "id": "st-config-f-config-buffer",
-      "source": "st-config",
-      "target": "f-config-buffer"
-    }
-  ]
+  }
 }

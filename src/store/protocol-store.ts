@@ -6,6 +6,8 @@ import type {
 } from '@/types/protocol';
 import { LEVEL_DEFAULTS } from '@/lib/codegen/shared';
 
+type StoredProject = Pick<import('@/types/protocol').ProtocolProject, 'name' | 'ir' | 'nodes' | 'edges'>;
+
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -16,6 +18,8 @@ interface ProtocolStore {
   edges: CanvasEdge[];
   selectedNodeId: string | null;
   projectName: string;
+  currentFilePath: string | null;
+  isDirty: boolean;
 
   setSelectedNode: (id: string | null) => void;
   addField: (field: Omit<ProtocolField, 'id'>) => string;
@@ -50,8 +54,37 @@ interface ProtocolStore {
   setModules: (overrides: Partial<ProtocolModules>) => void;
   setEndian: (endian: Endianness) => void;
   loadProject: (data: { name: string; ir: ProtocolIR; nodes?: CanvasNode[]; edges?: CanvasEdge[] }) => void;
-  exportProject: () => { name: string; ir: ProtocolIR; nodes: CanvasNode[]; edges: CanvasEdge[] };
+  exportProject: () => StoredProject;
+  setCurrentFilePath: (path: string | null) => void;
+  markDirty: () => void;
+  markClean: () => void;
   resetProject: () => void;
+}
+
+function buildEdgesFromIR(ir: ProtocolIR): CanvasEdge[] {
+  const edges: CanvasEdge[] = [];
+
+  for (const msg of ir.messages) {
+    for (const fieldId of msg.fields) {
+      edges.push({
+        id: `${msg.id}-${fieldId}`,
+        source: msg.id,
+        target: fieldId,
+      });
+    }
+  }
+
+  for (const st of ir.structs) {
+    for (const fieldId of st.fields) {
+      edges.push({
+        id: `${st.id}-${fieldId}`,
+        source: st.id,
+        target: fieldId,
+      });
+    }
+  }
+
+  return edges;
 }
 
 const demoFields: ProtocolField[] = [
@@ -132,6 +165,8 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
   edges: demoEdges,
   selectedNodeId: null,
   projectName: 'Demo Protocol',
+  currentFilePath: null,
+  isDirty: false,
 
   setSelectedNode: (id) => set({ selectedNodeId: id }),
 
@@ -147,6 +182,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
     set((s) => ({
       ir: { ...s.ir, fields: [...s.ir.fields, newField] },
       nodes: [...s.nodes, node],
+      isDirty: true,
     }));
     return id;
   },
@@ -157,6 +193,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
         ...s.ir,
         fields: s.ir.fields.map((f) => (f.id === id ? { ...f, ...updates } : f)),
       },
+      isDirty: true,
     })),
 
   removeField: (id) =>
@@ -176,6 +213,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+      isDirty: true,
     })),
 
   addMessage: (name) => {
@@ -190,6 +228,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
     set((s) => ({
       ir: { ...s.ir, messages: [...s.ir.messages, newMessage] },
       nodes: [...s.nodes, node],
+      isDirty: true,
     }));
     return id;
   },
@@ -203,6 +242,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes: s.nodes.map((n) =>
         n.id === id && updates.name ? { ...n, data: { ...n.data, label: updates.name } } : n
       ),
+      isDirty: true,
     })),
 
   removeMessage: (id) =>
@@ -214,6 +254,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+      isDirty: true,
     })),
 
   addStruct: (name) => {
@@ -228,6 +269,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
     set((s) => ({
       ir: { ...s.ir, structs: [...s.ir.structs, newStruct] },
       nodes: [...s.nodes, node],
+      isDirty: true,
     }));
     return id;
   },
@@ -241,6 +283,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes: s.nodes.map((n) =>
         n.id === id && updates.name ? { ...n, data: { ...n.data, label: updates.name } } : n
       ),
+      isDirty: true,
     })),
 
   removeStruct: (id) =>
@@ -252,6 +295,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+      isDirty: true,
     })),
 
   addEnum: (name, values) => {
@@ -266,6 +310,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
     set((s) => ({
       ir: { ...s.ir, enums: [...s.ir.enums, newEnum] },
       nodes: [...s.nodes, node],
+      isDirty: true,
     }));
     return id;
   },
@@ -279,6 +324,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes: s.nodes.map((n) =>
         n.id === id && updates.name ? { ...n, data: { ...n.data, label: updates.name } } : n
       ),
+      isDirty: true,
     })),
 
   removeEnum: (id) =>
@@ -290,24 +336,27 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+      isDirty: true,
     })),
 
-  addNode: (node) => set((s) => ({ nodes: [...s.nodes, node] })),
+  addNode: (node) => set((s) => ({ nodes: [...s.nodes, node], isDirty: true })),
 
   updateNodePosition: (id, position) =>
     set((s) => ({
       nodes: s.nodes.map((n) => (n.id === id ? { ...n, position } : n)),
+      isDirty: true,
     })),
 
   removeNode: (id) =>
     set((s) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
+      isDirty: true,
     })),
 
-  addEdge: (edge) => set((s) => ({ edges: [...s.edges, edge] })),
+  addEdge: (edge) => set((s) => ({ edges: [...s.edges, edge], isDirty: true })),
 
-  removeEdge: (id) => set((s) => ({ edges: s.edges.filter((e) => e.id !== id) })),
+  removeEdge: (id) => set((s) => ({ edges: s.edges.filter((e) => e.id !== id), isDirty: true })),
 
   setLevel: (level) =>
     set((s) => ({
@@ -316,6 +365,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
         level,
         modules: { ...LEVEL_DEFAULTS[level] },
       },
+      isDirty: true,
     })),
 
   setModules: (overrides) =>
@@ -324,12 +374,18 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
         ...s.ir,
         modules: { ...s.ir.modules, ...overrides },
       },
+      isDirty: true,
     })),
 
   setEndian: (endian) =>
     set((s) => ({
       ir: { ...s.ir, endian },
+      isDirty: true,
     })),
+
+  setCurrentFilePath: (path) => set({ currentFilePath: path }),
+  markDirty: () => set({ isDirty: true }),
+  markClean: () => set({ isDirty: false }),
 
   getFieldById: (id) => get().ir.fields.find((f) => f.id === id),
   getMessageById: (id) => get().ir.messages.find((m) => m.id === id),
@@ -361,16 +417,17 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       }
     }
 
-    const savedNodes = data.nodes && data.nodes.length > 0 ? data.nodes : null;
-    const savedEdges = data.edges && data.edges.length > 0 ? data.edges : null;
+    const savedNodes = data.nodes;
+    const savedEdges = data.edges;
 
-    if (savedNodes && savedEdges) {
+    if (savedNodes) {
       return set({
         projectName: data.name,
         ir: ir as ProtocolIR,
         nodes: savedNodes,
-        edges: savedEdges,
+        edges: savedEdges ?? buildEdgesFromIR(ir as ProtocolIR),
         selectedNodeId: null,
+        isDirty: false,
       });
     }
 
@@ -465,6 +522,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       nodes,
       edges,
       selectedNodeId: null,
+      isDirty: false,
     });
   },
 
@@ -482,5 +540,7 @@ export const useProtocolStore = create<ProtocolStore>((set, get) => ({
       edges: [],
       selectedNodeId: null,
       projectName: 'Untitled Protocol',
+      currentFilePath: null,
+      isDirty: false,
     }),
 }));

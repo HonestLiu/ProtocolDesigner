@@ -80,11 +80,38 @@ pub struct ProtocolField {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProtocolCanvasNode {
+    pub id: String,
+    pub r#type: String,
+    pub position: ProtocolCanvasPosition,
+    pub data: std::collections::HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProtocolCanvasPosition {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProtocolCanvasEdge {
+    pub id: String,
+    pub source: String,
+    pub target: String,
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ProtocolProject {
     pub name: String,
     pub ir: ProtocolIR,
-    pub nodes: Option<serde_json::Value>,
-    pub edges: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nodes: Option<Vec<ProtocolCanvasNode>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub edges: Option<Vec<ProtocolCanvasEdge>>,
 }
 
 #[tauri::command]
